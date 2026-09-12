@@ -37,7 +37,7 @@ This symlinks each skill directory into `~/.claude/skills/` so any tool that rea
 ## Adding a skill
 
 ```bash
-cp -r skills/example skills/my-new-skill
+mkdir skills/my-new-skill
 # Edit skills/my-new-skill/SKILL.md
 ```
 
@@ -49,7 +49,6 @@ plugin/
   .claude-plugin/plugin.json      # Plugin metadata
   hooks/hooks.json                # Hook definitions (if any)
 skills/
-  example/SKILL.md                # Template skill
   my-skill/SKILL.md               # Your skills go here
 install.sh                        # Symlink installer for non-plugin use
 ```
