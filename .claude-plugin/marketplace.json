@@ -1,0 +1,13 @@
+{
+  "name": "agent-skills",
+  "owner": {
+    "name": "undertakingyou"
+  },
+  "plugins": [
+    {
+      "name": "agent-skills",
+      "source": "./plugin",
+      "description": "Personal collection of Claude Code skills, portable across machines."
+    }
+  ]
+}
