@@ -9,7 +9,7 @@ Add to your `~/.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "agent-skills": {
+    "undertakingyou": {
       "source": {
         "source": "github",
         "repo": "undertakingyou/agent-skills"
@@ -17,7 +17,7 @@ Add to your `~/.claude/settings.json`:
     }
   },
   "enabledPlugins": {
-    "agent-skills@agent-skills": true
+    "agent-skills@undertakingyou": true
   }
 }
 ```
