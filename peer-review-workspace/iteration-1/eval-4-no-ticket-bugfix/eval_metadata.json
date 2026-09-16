@@ -1,0 +1,15 @@
+{
+  "eval_id": 4,
+  "eval_name": "no-ticket-bugfix-timezone-parsing",
+  "prompt": "Peer review PR #1412, no ticket. PR metadata is in fixtures/eval-4-pr-meta.json and the diff is in fixtures/eval-4-pr.diff. Skip the GitHub fetch and branch checkout steps — use these files directly.",
+  "assertions": [
+    {"name": "no-ticket-fulfillment-section", "type": "not_contains", "value": "Ticket Fulfillment"},
+    {"name": "has-no-ticket-headers", "type": "contains_all", "values": ["Highlights", "Findings", "What I Verified", "Summary"]},
+    {"name": "references-pr", "type": "contains", "value": "1412"},
+    {"name": "header-format-no-ticket", "type": "regex", "pattern": "PR #1412"},
+    {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js)"},
+    {"name": "flags-date-parsing-issue", "type": "regex", "pattern": "(?i)(fromisoformat|date.*pars|date.*string|naive.*datetime|no.*time.*component|date.*not.*datetime|input.*valid)"},
+    {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+    {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+  ]
+}

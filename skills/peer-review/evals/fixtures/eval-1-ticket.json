@@ -1,0 +1,14 @@
+{
+  "key": "DEMO-202",
+  "fields": {
+    "summary": "Show technician certification status on dispatch board",
+    "description": "## Requirements\n\n- On the dispatch board, each technician card should show a badge indicating their certification status: valid, expiring soon (within 30 days), or expired\n- Certification data lives in the `certifications` subproject; the dispatch board is in the `scheduling` subproject\n- The badge should be color-coded: green for valid, yellow for expiring, red for expired\n- If a technician has multiple certifications, show the worst status (i.e., if any cert is expired, show expired)",
+    "status": {
+      "name": "In Review"
+    },
+    "issuetype": {
+      "name": "Story"
+    },
+    "subtasks": []
+  }
+}

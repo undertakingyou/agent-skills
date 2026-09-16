@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "eval_name": "cert-badges-cross-boundary",
+  "prompt": "Peer review this PR against its ticket. Ticket data is in fixtures/eval-1-ticket.json, PR metadata in fixtures/eval-1-pr-meta.json, and the diff in fixtures/eval-1-pr.diff. Skip the Jira/GitHub fetch and branch checkout steps — use these files directly.",
+  "assertions": [
+    {"name": "has-required-headers", "type": "contains_all", "values": ["Ticket Fulfillment", "Highlights", "Findings", "What I Verified", "Summary"]},
+    {"name": "has-requirements-table", "type": "regex", "pattern": "\\|.*Requirement.*\\|.*Status.*\\|"},
+    {"name": "references-ticket", "type": "contains", "value": "DEMO-202"},
+    {"name": "references-pr", "type": "contains", "value": "891"},
+    {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|tsx?|js|yaml|yml|json)"},
+    {"name": "flags-cross-boundary-coupling", "type": "regex", "pattern": "(?i)(cross.?boundary|coupling|import.*certifications|direct.*db|direct.*query)"},
+    {"name": "flags-stale-ticket-reference", "type": "regex", "pattern": "(?i)(stale|ticket.*comment|DEMO-202.*comment|comment.*DEMO-202)"},
+    {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+    {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+  ]
+}

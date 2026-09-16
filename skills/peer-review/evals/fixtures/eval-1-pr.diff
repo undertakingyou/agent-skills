@@ -1,0 +1,153 @@
+diff --git a/scheduling/src/dispatch/queries/certifications.ts b/scheduling/src/dispatch/queries/certifications.ts
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/scheduling/src/dispatch/queries/certifications.ts
+@@ -0,0 +1,22 @@
++import { pool } from "../../../certifications/src/db/connection";
++
++interface CertRow {
++  technician_id: string;
++  cert_type: string;
++  expires_at: string;
++}
++
++export async function getTechCertifications(
++  technicianIds: string[]
++): Promise<CertRow[]> {
++  const placeholders = technicianIds.map((_, i) => `$${i + 1}`).join(", ");
++  const result = await pool.query(
++    `SELECT technician_id, cert_type, expires_at
++     FROM certifications.technician_certs
++     WHERE technician_id IN (${placeholders})
++       AND deleted_at IS NULL`,
++    technicianIds
++  );
++  return result.rows;
++}
+diff --git a/scheduling/src/dispatch/hooks/useCertStatus.ts b/scheduling/src/dispatch/hooks/useCertStatus.ts
+new file mode 100644
+index 0000000..b2c3d4e
+--- /dev/null
++++ b/scheduling/src/dispatch/hooks/useCertStatus.ts
+@@ -0,0 +1,48 @@
++import { useQuery } from "@tanstack/react-query";
++import { getTechCertifications } from "../queries/certifications";
++
++type CertStatus = "valid" | "expiring" | "expired";
++
++interface CertStatusResult {
++  status: CertStatus;
++  worstCert?: string;
++  daysUntilExpiry?: number;
++}
++
++function computeStatus(expiresAt: string): CertStatus {
++  const now = new Date();
++  const expiry = new Date(expiresAt);
++  const daysLeft = Math.floor(
++    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
++  );
++
++  if (daysLeft < 0) return "expired";
++  if (daysLeft <= 30) return "expiring";
++  return "valid";
++}
++
++const STATUS_PRIORITY: Record<CertStatus, number> = {
++  expired: 0,
++  expiring: 1,
++  valid: 2,
++};
++
++export function useCertStatus(technicianId: string): CertStatusResult {
++  const { data: certs } = useQuery({
++    queryKey: ["certStatus", technicianId],
++    queryFn: () => getTechCertifications([technicianId]),
++  });
++
++  if (!certs || certs.length === 0) {
++    return { status: "valid" };
++  }
++
++  let worst: CertStatusResult = { status: "valid" };
++
++  for (const cert of certs) {
++    const status = computeStatus(cert.expires_at);
++    if (STATUS_PRIORITY[status] < STATUS_PRIORITY[worst.status]) {
++      worst = { status, worstCert: cert.cert_type };
++    }
++  }
++
++  return worst;
++}
+diff --git a/scheduling/src/dispatch/components/CertBadge.tsx b/scheduling/src/dispatch/components/CertBadge.tsx
+new file mode 100644
+index 0000000..c3d4e5f
+--- /dev/null
++++ b/scheduling/src/dispatch/components/CertBadge.tsx
+@@ -0,0 +1,30 @@
++import React from "react";
++
++type CertStatus = "valid" | "expiring" | "expired";
++
++const STATUS_COLORS: Record<CertStatus, string> = {
++  valid: "#22c55e",
++  expiring: "#eab308",
++  expired: "#ef4444",
++};
++
++const STATUS_LABELS: Record<CertStatus, string> = {
++  valid: "Certified",
++  expiring: "Expiring Soon",
++  expired: "Expired",
++};
++
++interface CertBadgeProps {
++  status: CertStatus;
++}
++
++export function CertBadge({ status }: CertBadgeProps) {
++  return (
++    <span
++      style={{
++        backgroundColor: STATUS_COLORS[status],
++        color: "white",
++        padding: "2px 8px",
++        borderRadius: "4px",
++        fontSize: "12px",
++      }}
++    >
++      {STATUS_LABELS[status]}
++    </span>
++  );
++}
+diff --git a/scheduling/src/dispatch/components/TechnicianCard.tsx b/scheduling/src/dispatch/components/TechnicianCard.tsx
+index d4e5f6g..h7i8j9k 100644
+--- a/scheduling/src/dispatch/components/TechnicianCard.tsx
++++ b/scheduling/src/dispatch/components/TechnicianCard.tsx
+@@ -1,5 +1,7 @@
+ import React from "react";
+ import { Technician } from "../types";
++import { CertBadge } from "./CertBadge";
++import { useCertStatus } from "../hooks/useCertStatus";
+
+ interface TechnicianCardProps {
+   technician: Technician;
+@@ -7,12 +9,16 @@ interface TechnicianCardProps {
+ }
+
+ export function TechnicianCard({ technician, onAssign }: TechnicianCardProps) {
++  const certStatus = useCertStatus(technician.id);
++
+   return (
+     <div className="technician-card" onClick={() => onAssign(technician.id)}>
+       <div className="tech-name">{technician.name}</div>
+       <div className="tech-skills">
+         {technician.skills.join(", ")}
+       </div>
++      {/* DEMO-202: show cert badge */}
++      <CertBadge status={certStatus.status} />
+     </div>
+   );
+ }

@@ -1,0 +1,15 @@
+{
+  "eval_id": 3,
+  "eval_name": "no-ticket-refactor-dropped-reply-to",
+  "prompt": "Peer review PR #1340. There's no ticket for this one. PR metadata is in fixtures/eval-3-pr-meta.json and the diff is in fixtures/eval-3-pr.diff. Skip the GitHub fetch and branch checkout steps — use these files directly.",
+  "assertions": [
+    {"name": "no-ticket-fulfillment-section", "type": "not_contains", "value": "Ticket Fulfillment"},
+    {"name": "has-no-ticket-headers", "type": "contains_all", "values": ["Highlights", "Findings", "What I Verified", "Summary"]},
+    {"name": "references-pr", "type": "contains", "value": "1340"},
+    {"name": "header-format-no-ticket", "type": "regex", "pattern": "PR #1340"},
+    {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js|yaml|yml|json)"},
+    {"name": "flags-dropped-reply-to", "type": "regex", "pattern": "(?i)(reply.?to|reply_to).*(drop|lost|miss|remov|absent|no longer|not.*support|not.*accept)"},
+    {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+    {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+  ]
+}

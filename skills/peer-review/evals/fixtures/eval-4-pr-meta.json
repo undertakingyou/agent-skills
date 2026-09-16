@@ -1,0 +1,19 @@
+{
+  "number": 1412,
+  "title": "fix: technician availability showing wrong times for EST users",
+  "body": "## Summary\nUsers in Eastern time were seeing available slots shifted by an hour during daylight saving time. The `get_available_slots` function was using a fixed UTC-5 offset instead of the timezone-aware `America/New_York` zone.\n\nThis fixes it by using `zoneinfo.ZoneInfo` throughout the availability calculation pipeline.\n\n## Test plan\n- Manual testing with EST/EDT user accounts\n- Added regression test for the DST boundary case",
+  "baseRefName": "main",
+  "headRefName": "fix/est-availability-timezone",
+  "files": [
+    {"path": "src/scheduling/availability.py", "additions": 22, "deletions": 15},
+    {"path": "src/scheduling/time_utils.py", "additions": 14, "deletions": 6},
+    {"path": "src/scheduling/routes.py", "additions": 2, "deletions": 2},
+    {"path": "tests/scheduling/test_availability.py", "additions": 28, "deletions": 0}
+  ],
+  "additions": 66,
+  "deletions": 23,
+  "commits": [
+    {"messageHeadline": "fix: use ZoneInfo instead of fixed UTC offset for availability"},
+    {"messageHeadline": "test: add DST boundary regression test"}
+  ]
+}

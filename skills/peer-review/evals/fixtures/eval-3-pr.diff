@@ -1,0 +1,285 @@
+diff --git a/src/shared/email/renderer.py b/src/shared/email/renderer.py
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/src/shared/email/renderer.py
+@@ -0,0 +1,65 @@
++from pathlib import Path
++from jinja2 import Environment, FileSystemLoader, select_autoescape
++from src.shared.email.templates import DEFAULT_CONTEXT
++
++
++class TemplateRenderer:
++    """Shared email template rendering for all services."""
++
++    def __init__(self, template_dir: str | Path | None = None):
++        self.template_dir = Path(template_dir) if template_dir else Path(__file__).parent / "default_templates"
++        self.env = Environment(
++            loader=FileSystemLoader(str(self.template_dir)),
++            autoescape=select_autoescape(["html", "xml"]),
++        )
++
++    def render(
++        self,
++        template_name: str,
++        context: dict | None = None,
++        subject: str = "",
++    ) -> dict:
++        template = self.env.get_template(template_name)
++        merged_context = {**DEFAULT_CONTEXT, **(context or {})}
++        html_body = template.render(**merged_context)
++
++        return {
++            "subject": subject,
++            "html_body": html_body,
++            "text_body": self._strip_html(html_body),
++        }
++
++    def render_string(self, template_string: str, context: dict | None = None) -> str:
++        template = self.env.from_string(template_string)
++        merged_context = {**DEFAULT_CONTEXT, **(context or {})}
++        return template.render(**merged_context)
++
++    @staticmethod
++    def _strip_html(html: str) -> str:
++        import re
++        text = re.sub(r"<[^>]+>", "", html)
++        text = re.sub(r"\n{3,}", "\n\n", text)
++        return text.strip()
+diff --git a/src/shared/email/templates.py b/src/shared/email/templates.py
+new file mode 100644
+index 0000000..b2c3d4e
+--- /dev/null
++++ b/src/shared/email/templates.py
+@@ -0,0 +1,18 @@
++DEFAULT_CONTEXT = {
++    "company_name": "XOi Technologies",
++    "support_email": "support@xoi.io",
++    "current_year": "2026",
++    "unsubscribe_url": "",
++}
++
++
++TEMPLATE_REGISTRY = {
++    "welcome": "welcome.html",
++    "password_reset": "password_reset.html",
++    "work_order_complete": "work_order_complete.html",
++    "report_ready": "report_ready.html",
++    "cert_expiring": "cert_expiring.html",
++    "weekly_digest": "weekly_digest.html",
++}
+diff --git a/src/notifications/email_builder.py b/src/notifications/email_builder.py
+deleted file mode 100644
+index c3d4e5f..0000000
+--- a/src/notifications/email_builder.py
++++ /dev/null
+@@ -1,87 +0,0 @@
+-from jinja2 import Environment, FileSystemLoader
+-from pathlib import Path
+-import re
+-
+-
+-TEMPLATE_DIR = Path(__file__).parent / "templates"
+-
+-
+-class EmailBuilder:
+-    """Old Mailgun-era email builder. Handles template rendering and
+-    formatting for the notification service."""
+-
+-    def __init__(self):
+-        self.env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
+-        self._default_context = {
+-            "company_name": "XOi Technologies",
+-            "support_email": "support@xoi.io",
+-        }
+-
+-    def build(self, template_name: str, context: dict, subject: str = "",
+-              reply_to: str | None = None) -> dict:
+-        template = self.env.get_template(template_name)
+-        html = template.render(**{**self._default_context, **context})
+-        plain = self._to_plaintext(html)
+-
+-        result = {
+-            "subject": subject,
+-            "html_body": html,
+-            "text_body": plain,
+-        }
+-        if reply_to:
+-            result["reply_to"] = reply_to
+-        return result
+-
+-    def _to_plaintext(self, html: str) -> str:
+-        text = re.sub(r"<[^>]+>", "", html)
+-        return re.sub(r"\n{3,}", "\n\n", text).strip()
+-
+-    # ---- Dead code from Mailgun migration ----
+-
+-    def _format_mailgun_payload(self, msg: dict) -> dict:
+-        """Format message for Mailgun API. No longer used since
+-        we switched to SES."""
+-        return {
+-            "from": f"{msg.get('from_name', 'XOi')} <noreply@xoi.io>",
+-            "to": msg["to"],
+-            "subject": msg["subject"],
+-            "html": msg["html_body"],
+-            "text": msg.get("text_body", ""),
+-            "h:Reply-To": msg.get("reply_to", ""),
+-        }
+-
+-    def _batch_mailgun_send(self, messages: list[dict]) -> list[dict]:
+-        """Batch send via Mailgun. Unused since SES migration."""
+-        results = []
+-        for msg in messages:
+-            payload = self._format_mailgun_payload(msg)
+-            results.append({"status": "queued", "payload": payload})
+-        return results
+diff --git a/src/notifications/service.py b/src/notifications/service.py
+index d4e5f6g..h7i8j9k 100644
+--- a/src/notifications/service.py
++++ b/src/notifications/service.py
+@@ -1,7 +1,6 @@
+ from typing import List, Optional
+ from src.notifications.repository import NotificationRepository
+-from src.notifications.email_builder import EmailBuilder
++from src.shared.email.renderer import TemplateRenderer
+ from src.notifications.models import Notification
+ from src.audit.service import AuditService
+
+@@ -12,14 +11,13 @@ class NotificationService:
+         self,
+         repository: NotificationRepository,
+         audit_service: AuditService,
+-        email_builder: EmailBuilder | None = None,
++        renderer: TemplateRenderer | None = None,
+     ):
+         self.repository = repository
+         self.audit_service = audit_service
+-        self.email_builder = email_builder or EmailBuilder()
++        self.renderer = renderer or TemplateRenderer()
+
+     def send_email(
+         self,
+         tenant_id: str,
+         to: str,
+         template_name: str,
+@@ -27,7 +25,7 @@ class NotificationService:
+         subject: str = "",
+     ) -> Notification:
+-        rendered = self.email_builder.build(
++        rendered = self.renderer.render(
+             template_name=template_name,
+             context=context or {},
+             subject=subject,
+diff --git a/src/report_delivery/sender.py b/src/report_delivery/sender.py
+index e5f6g7h..i8j9k0l 100644
+--- a/src/report_delivery/sender.py
++++ b/src/report_delivery/sender.py
+@@ -1,46 +1,14 @@
+-from jinja2 import Environment, FileSystemLoader
+-from pathlib import Path
++from src.shared.email.renderer import TemplateRenderer
+ from src.report_delivery.repository import ReportDeliveryRepository
+
+-REPORT_TEMPLATE_DIR = Path(__file__).parent / "templates"
+-
+
+ class ReportSender:
+-    def __init__(self, repository: ReportDeliveryRepository):
++    def __init__(self, repository: ReportDeliveryRepository, renderer: TemplateRenderer | None = None):
+         self.repository = repository
+-        self._env = Environment(loader=FileSystemLoader(str(REPORT_TEMPLATE_DIR)))
+-        self._defaults = {
+-            "company_name": "XOi Technologies",
+-            "support_email": "support@xoi.io",
+-        }
++        self.renderer = renderer or TemplateRenderer()
+
+     def send_report(self, tenant_id: str, report_id: str, to: str) -> dict:
+         report = self.repository.get(report_id, tenant_id)
+-        template = self._env.get_template("report_ready.html")
+-        html = template.render(**{**self._defaults, "report": report})
+-
+-        return {
+-            "to": to,
+-            "subject": f"Report Ready: {report.title}",
+-            "html_body": html,
+-            "text_body": self._strip(html),
+-        }
+-
+-    @staticmethod
+-    def _strip(html: str) -> str:
+-        import re
+-        return re.sub(r"<[^>]+>", "", html).strip()
++        rendered = self.renderer.render("report_ready.html", {"report": report}, subject=f"Report Ready: {report.title}")
++        return {"to": to, **rendered}
+diff --git a/tests/shared/email/test_renderer.py b/tests/shared/email/test_renderer.py
+new file mode 100644
+index 0000000..f6g7h8i
+--- /dev/null
++++ b/tests/shared/email/test_renderer.py
+@@ -0,0 +1,55 @@
++import pytest
++from pathlib import Path
++from src.shared.email.renderer import TemplateRenderer
++
++
++@pytest.fixture
++def template_dir(tmp_path):
++    tmpl = tmp_path / "test.html"
++    tmpl.write_text("<h1>Hello {{ name }}</h1><p>From {{ company_name }}</p>")
++    return tmp_path
++
++
++@pytest.fixture
++def renderer(template_dir):
++    return TemplateRenderer(template_dir=template_dir)
++
++
++class TestTemplateRenderer:
++    def test_render_basic_template(self, renderer):
++        result = renderer.render("test.html", {"name": "Alice"}, subject="Hi")
++        assert result["subject"] == "Hi"
++        assert "Alice" in result["html_body"]
++        assert "XOi Technologies" in result["html_body"]
++
++    def test_render_includes_default_context(self, renderer):
++        result = renderer.render("test.html", {"name": "Bob"})
++        assert "XOi Technologies" in result["html_body"]
++
++    def test_render_generates_text_body(self, renderer):
++        result = renderer.render("test.html", {"name": "Charlie"})
++        assert "Charlie" in result["text_body"]
++        assert "<h1>" not in result["text_body"]
++
++    def test_render_string(self, renderer):
++        result = renderer.render_string("Hi {{ name }} from {{ company_name }}", {"name": "Dave"})
++        assert "Dave" in result
++        assert "XOi Technologies" in result
++
++    def test_custom_context_overrides_defaults(self, renderer):
++        result = renderer.render("test.html", {"name": "Eve", "company_name": "TestCo"})
++        assert "TestCo" in result["html_body"]
++        assert "XOi Technologies" not in result["html_body"]
++
++    def test_autoescape_html(self, renderer):
++        result = renderer.render("test.html", {"name": "<script>alert('xss')</script>"})
++        assert "<script>" not in result["html_body"]
++        assert "&lt;script&gt;" in result["html_body"]
+diff --git a/tests/notifications/test_service.py b/tests/notifications/test_service.py
+index g7h8i9j..k0l1m2n 100644
+--- a/tests/notifications/test_service.py
++++ b/tests/notifications/test_service.py
+@@ -1,6 +1,6 @@
+ import pytest
+ from unittest.mock import MagicMock
+-from src.notifications.email_builder import EmailBuilder
++from src.shared.email.renderer import TemplateRenderer
+ from src.notifications.service import NotificationService
+
+
+@@ -14,7 +14,7 @@ def mock_audit():
+
+ @pytest.fixture
+ def service(mock_repo, mock_audit):
+-    return NotificationService(repository=mock_repo, audit_service=mock_audit)
++    return NotificationService(repository=mock_repo, audit_service=mock_audit, renderer=MagicMock())

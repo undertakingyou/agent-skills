@@ -1,0 +1,106 @@
+{
+  "skill_name": "peer-review",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Peer review this PR against its ticket. Ticket data is in fixtures/eval-0-ticket.json, PR metadata in fixtures/eval-0-pr-meta.json, and the diff in fixtures/eval-0-pr.diff. Skip the Jira/GitHub fetch and branch checkout steps — use these files directly.",
+      "expected_output": "A markdown review covering ticket fulfillment for DEMO-101 against PR #542 (bulk archive endpoint), with a requirements table, highlights, findings, and summary. Should note the duplicate batch-size validation (pydantic max_length=100 AND route-level HTTPException check).",
+      "files": [
+        "evals/fixtures/eval-0-ticket.json",
+        "evals/fixtures/eval-0-pr-meta.json",
+        "evals/fixtures/eval-0-pr.diff"
+      ],
+      "assertions": [
+        {"name": "has-required-headers", "type": "contains_all", "values": ["Ticket Fulfillment", "Highlights", "Findings", "What I Verified", "Summary"]},
+        {"name": "has-requirements-table", "type": "regex", "pattern": "\\|.*Requirement.*\\|.*Status.*\\|"},
+        {"name": "references-ticket", "type": "contains", "value": "DEMO-101"},
+        {"name": "references-pr", "type": "contains", "value": "542"},
+        {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js|yaml|yml|json)"},
+        {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+        {"name": "has-fulfillment-verdict", "type": "regex", "pattern": "(?i)(all|fully|partially|unmet|addressed|criteria)"},
+        {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Peer review this PR against its ticket. Ticket data is in fixtures/eval-1-ticket.json, PR metadata in fixtures/eval-1-pr-meta.json, and the diff in fixtures/eval-1-pr.diff. Skip the Jira/GitHub fetch and branch checkout steps — use these files directly.",
+      "expected_output": "A markdown review that flags the cross-boundary coupling — the scheduling subproject imports the certifications subproject's DB connection directly and queries its tables. Should also flag the stale ticket reference (DEMO-202 comment in TechnicianCard.tsx). Should note the badge component and status logic as highlights.",
+      "files": [
+        "evals/fixtures/eval-1-ticket.json",
+        "evals/fixtures/eval-1-pr-meta.json",
+        "evals/fixtures/eval-1-pr.diff"
+      ],
+      "assertions": [
+        {"name": "has-required-headers", "type": "contains_all", "values": ["Ticket Fulfillment", "Highlights", "Findings", "What I Verified", "Summary"]},
+        {"name": "has-requirements-table", "type": "regex", "pattern": "\\|.*Requirement.*\\|.*Status.*\\|"},
+        {"name": "references-ticket", "type": "contains", "value": "DEMO-202"},
+        {"name": "references-pr", "type": "contains", "value": "891"},
+        {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|tsx?|js|yaml|yml|json)"},
+        {"name": "flags-cross-boundary-coupling", "type": "regex", "pattern": "(?i)(cross.?boundary|coupling|import.*certifications|direct.*db|direct.*query)"},
+        {"name": "flags-stale-ticket-reference", "type": "regex", "pattern": "(?i)(stale|ticket.*comment|DEMO-202.*comment|comment.*DEMO-202)"},
+        {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+        {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Peer review this PR against its ticket. Ticket data is in fixtures/eval-2-ticket.json, PR metadata in fixtures/eval-2-pr-meta.json, and the diff in fixtures/eval-2-pr.diff. Skip the Jira/GitHub fetch and branch checkout steps — use these files directly.",
+      "expected_output": "A markdown review that identifies partial ticket fulfillment — the PR uses offset-based pagination instead of the required cursor-based pagination, is missing the installation date range filter, and the response metadata lacks total_count. Should also flag the SQL injection risk in the ILIKE search (unescaped % and _ characters in user input).",
+      "files": [
+        "evals/fixtures/eval-2-ticket.json",
+        "evals/fixtures/eval-2-pr-meta.json",
+        "evals/fixtures/eval-2-pr.diff"
+      ],
+      "assertions": [
+        {"name": "has-required-headers", "type": "contains_all", "values": ["Ticket Fulfillment", "Highlights", "Findings", "What I Verified", "Summary"]},
+        {"name": "has-requirements-table", "type": "regex", "pattern": "\\|.*Requirement.*\\|.*Status.*\\|"},
+        {"name": "references-ticket", "type": "contains", "value": "DEMO-303"},
+        {"name": "references-pr", "type": "contains", "value": "1105"},
+        {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js|yaml|yml|json)"},
+        {"name": "flags-pagination-mismatch", "type": "regex", "pattern": "(?i)(offset|cursor|pagination.*(mismatch|differ|instead|not.*cursor))"},
+        {"name": "flags-missing-date-filter", "type": "regex", "pattern": "(?i)(install.*date|date.*range|date.*filter).*(missing|not|absent|unaddress)"},
+        {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+        {"name": "has-fulfillment-verdict", "type": "regex", "pattern": "(?i)(partial|unmet|not.*fully)"},
+        {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Peer review PR #1340. There's no ticket for this one. PR metadata is in fixtures/eval-3-pr-meta.json and the diff is in fixtures/eval-3-pr.diff. Skip the GitHub fetch and branch checkout steps — use these files directly.",
+      "expected_output": "A markdown review WITHOUT a Ticket Fulfillment section (no ticket provided). Should note the dropped reply_to parameter — the old EmailBuilder.build() accepted a reply_to kwarg and included it in the result dict, but the new TemplateRenderer.render() does not accept or propagate reply_to, so any callers relying on reply_to headers will silently lose that functionality. Should highlight the good cleanup of dead Mailgun code and the XSS-safe autoescape.",
+      "files": [
+        "evals/fixtures/eval-3-pr-meta.json",
+        "evals/fixtures/eval-3-pr.diff"
+      ],
+      "assertions": [
+        {"name": "no-ticket-fulfillment-section", "type": "not_contains", "value": "Ticket Fulfillment"},
+        {"name": "has-no-ticket-headers", "type": "contains_all", "values": ["Highlights", "Findings", "What I Verified", "Summary"]},
+        {"name": "references-pr", "type": "contains", "value": "1340"},
+        {"name": "header-format-no-ticket", "type": "regex", "pattern": "PR #1340"},
+        {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js|yaml|yml|json)"},
+        {"name": "flags-dropped-reply-to", "type": "regex", "pattern": "(?i)(reply.?to|reply_to).*(drop|lost|miss|remov|absent|no longer|not.*support|not.*accept)"},
+        {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+        {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Peer review PR #1412, no ticket. PR metadata is in fixtures/eval-4-pr-meta.json and the diff is in fixtures/eval-4-pr.diff. Skip the GitHub fetch and branch checkout steps — use these files directly.",
+      "expected_output": "A markdown review WITHOUT a Ticket Fulfillment section. Should note that date_str parsing via fromisoformat with no timezone info combined with ZoneInfo could behave unexpectedly — if the input is just a date like '2025-03-09' (no time component), fromisoformat produces a date object not a datetime, which will fail on .astimezone(). Should highlight the good DST fix and the addition of local_start/local_end in the response.",
+      "files": [
+        "evals/fixtures/eval-4-pr-meta.json",
+        "evals/fixtures/eval-4-pr.diff"
+      ],
+      "assertions": [
+        {"name": "no-ticket-fulfillment-section", "type": "not_contains", "value": "Ticket Fulfillment"},
+        {"name": "has-no-ticket-headers", "type": "contains_all", "values": ["Highlights", "Findings", "What I Verified", "Summary"]},
+        {"name": "references-pr", "type": "contains", "value": "1412"},
+        {"name": "header-format-no-ticket", "type": "regex", "pattern": "PR #1412"},
+        {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js)"},
+        {"name": "flags-date-parsing-issue", "type": "regex", "pattern": "(?i)(fromisoformat|date.*pars|date.*string|naive.*datetime|no.*time.*component|date.*not.*datetime|input.*valid)"},
+        {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+        {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "number": 1105,
+  "title": "feat: equipment search endpoint with filters",
+  "body": "## Summary\nAdds the equipment search endpoint with full-text search and type/manufacturer filters. Pagination uses offset-based approach for now.\n\n## Test plan\n- Integration tests for search with various filter combinations\n- Tested case-insensitive search manually",
+  "baseRefName": "main",
+  "headRefName": "feat/equipment-search",
+  "files": [
+    {"path": "src/equipment/routes.py", "additions": 38, "deletions": 0},
+    {"path": "src/equipment/service.py", "additions": 45, "deletions": 0},
+    {"path": "src/equipment/repository.py", "additions": 52, "deletions": 0},
+    {"path": "src/equipment/schemas.py", "additions": 32, "deletions": 0},
+    {"path": "tests/equipment/test_search.py", "additions": 78, "deletions": 0}
+  ],
+  "additions": 245,
+  "deletions": 0,
+  "commits": [
+    {"messageHeadline": "feat: add equipment search with text and filter support"},
+    {"messageHeadline": "test: search endpoint integration tests"}
+  ]
+}

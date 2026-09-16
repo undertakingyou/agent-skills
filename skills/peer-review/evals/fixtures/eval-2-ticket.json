@@ -1,0 +1,14 @@
+{
+  "key": "DEMO-303",
+  "fields": {
+    "summary": "Implement equipment search with filters",
+    "description": "## Requirements\n\n- Add a search endpoint at `/api/v1/equipment/search` that supports full-text search on equipment name and model number\n- Support filtering by: equipment type, manufacturer, installation date range, and active/inactive status\n- Results should be paginated (default 25 per page) with cursor-based pagination\n- Include total count in response metadata\n- Search should be case-insensitive\n- Empty search with no filters returns all equipment for the tenant, paginated",
+    "status": {
+      "name": "In Review"
+    },
+    "issuetype": {
+      "name": "Story"
+    },
+    "subtasks": []
+  }
+}

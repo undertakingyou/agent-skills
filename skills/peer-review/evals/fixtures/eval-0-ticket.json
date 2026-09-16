@@ -1,0 +1,14 @@
+{
+  "key": "DEMO-101",
+  "fields": {
+    "summary": "Add bulk archive endpoint for work orders",
+    "description": "## Requirements\n\n- Add a POST endpoint at `/api/v1/work-orders/bulk-archive` that accepts a list of work order IDs\n- Validate that all IDs belong to the requesting tenant\n- Only archive work orders in `completed` or `cancelled` status; return errors for any that aren't\n- Return a summary response: `{\"archived\": [...ids], \"failed\": [{\"id\": ..., \"reason\": ...}]}`\n- Add an audit log entry for each successfully archived work order\n- Limit batch size to 100 IDs per request",
+    "status": {
+      "name": "In Review"
+    },
+    "issuetype": {
+      "name": "Story"
+    },
+    "subtasks": []
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "eval_id": 4,
+  "eval_name": "no-ticket-bugfix-timezone-parsing",
+  "run_type": "with_skill",
+  "pass_rate": 1.0,
+  "passed": 8,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "no-ticket-fulfillment-section",
+      "passed": true,
+      "evidence": "'Ticket Fulfillment' correctly absent"
+    },
+    {
+      "text": "has-no-ticket-headers",
+      "passed": true,
+      "evidence": "All values found"
+    },
+    {
+      "text": "references-pr",
+      "passed": true,
+      "evidence": "Found '1412'"
+    },
+    {
+      "text": "header-format-no-ticket",
+      "passed": true,
+      "evidence": "Matched: 'PR #1412'"
+    },
+    {
+      "text": "cites-file-paths",
+      "passed": true,
+      "evidence": "Matched: 'time_utils.py'"
+    },
+    {
+      "text": "flags-date-parsing-issue",
+      "passed": true,
+      "evidence": "Matched: 'naive datetimes when `tz` is not passed** (`time_utils.py:to_utc`): When `dt` is'"
+    },
+    {
+      "text": "uses-severity-levels",
+      "passed": true,
+      "evidence": "Found: ['Critical', 'Important', 'Minor']"
+    },
+    {
+      "text": "has-highlights",
+      "passed": true,
+      "evidence": "Matched: '### Highlights\n\n- **Root-cause fix, not a patch** (`time_utils.py`): Rather than'"
+    }
+  ]
+}

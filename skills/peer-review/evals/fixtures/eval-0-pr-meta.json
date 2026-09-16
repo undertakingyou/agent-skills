@@ -1,0 +1,20 @@
+{
+  "number": 542,
+  "title": "feat: bulk archive endpoint for work orders",
+  "body": "## Summary\nAdds a new bulk archive endpoint per DEMO-101. Accepts up to 100 work order IDs, validates tenant ownership and status, archives eligible ones, and returns a structured response.\n\n## Test plan\n- Unit tests for service logic (status validation, tenant check, batch limit)\n- Integration test hitting the endpoint with mixed valid/invalid IDs",
+  "baseRefName": "main",
+  "headRefName": "feat/bulk-archive-work-orders",
+  "files": [
+    {"path": "src/work_orders/routes.py", "additions": 45, "deletions": 2},
+    {"path": "src/work_orders/service.py", "additions": 62, "deletions": 0},
+    {"path": "src/work_orders/repository.py", "additions": 28, "deletions": 0},
+    {"path": "src/work_orders/schemas.py", "additions": 18, "deletions": 0},
+    {"path": "tests/work_orders/test_bulk_archive.py", "additions": 95, "deletions": 0}
+  ],
+  "additions": 248,
+  "deletions": 2,
+  "commits": [
+    {"messageHeadline": "feat: add bulk archive endpoint and service logic"},
+    {"messageHeadline": "test: add unit and integration tests for bulk archive"}
+  ]
+}

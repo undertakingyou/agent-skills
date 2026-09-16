@@ -1,0 +1,17 @@
+{
+  "eval_id": 2,
+  "eval_name": "equipment-search-pagination-mismatch",
+  "prompt": "Peer review this PR against its ticket. Ticket data is in fixtures/eval-2-ticket.json, PR metadata in fixtures/eval-2-pr-meta.json, and the diff in fixtures/eval-2-pr.diff. Skip the Jira/GitHub fetch and branch checkout steps — use these files directly.",
+  "assertions": [
+    {"name": "has-required-headers", "type": "contains_all", "values": ["Ticket Fulfillment", "Highlights", "Findings", "What I Verified", "Summary"]},
+    {"name": "has-requirements-table", "type": "regex", "pattern": "\\|.*Requirement.*\\|.*Status.*\\|"},
+    {"name": "references-ticket", "type": "contains", "value": "DEMO-303"},
+    {"name": "references-pr", "type": "contains", "value": "1105"},
+    {"name": "cites-file-paths", "type": "regex", "pattern": "[a-z_/]+\\.(py|ts|js|yaml|yml|json)"},
+    {"name": "flags-pagination-mismatch", "type": "regex", "pattern": "(?i)(offset|cursor|pagination.*(mismatch|differ|instead|not.*cursor))"},
+    {"name": "flags-missing-date-filter", "type": "regex", "pattern": "(?i)(install.*date|date.*range|date.*filter).*(missing|not|absent|unaddress)"},
+    {"name": "uses-severity-levels", "type": "contains_any", "values": ["Critical", "Important", "Minor"]},
+    {"name": "has-fulfillment-verdict", "type": "regex", "pattern": "(?i)(partial|unmet|not.*fully)"},
+    {"name": "has-highlights", "type": "regex", "pattern": "(?s)### Highlights.*?\\n- .+"}
+  ]
+}

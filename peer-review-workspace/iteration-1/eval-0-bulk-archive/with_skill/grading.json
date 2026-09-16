@@ -1,0 +1,50 @@
+{
+  "eval_id": 0,
+  "eval_name": "bulk-archive-with-ticket",
+  "run_type": "with_skill",
+  "pass_rate": 1.0,
+  "passed": 8,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "has-required-headers",
+      "passed": true,
+      "evidence": "All values found"
+    },
+    {
+      "text": "has-requirements-table",
+      "passed": true,
+      "evidence": "Matched: '| # | Requirement | Status | Notes |'"
+    },
+    {
+      "text": "references-ticket",
+      "passed": true,
+      "evidence": "Found 'DEMO-101'"
+    },
+    {
+      "text": "references-pr",
+      "passed": true,
+      "evidence": "Found '542'"
+    },
+    {
+      "text": "cites-file-paths",
+      "passed": true,
+      "evidence": "Matched: 'routes.py'"
+    },
+    {
+      "text": "uses-severity-levels",
+      "passed": true,
+      "evidence": "Found: ['Critical', 'Important', 'Minor']"
+    },
+    {
+      "text": "has-fulfillment-verdict",
+      "passed": true,
+      "evidence": "Matched: 'all'"
+    },
+    {
+      "text": "has-highlights",
+      "passed": true,
+      "evidence": "Matched: '### Highlights\n\n- **Tenant scoping baked into the query** -- `repository.py`'s `'"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "eval_id": 3,
+  "eval_name": "no-ticket-refactor-dropped-reply-to",
+  "run_type": "without_skill",
+  "pass_rate": 0.75,
+  "passed": 6,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "no-ticket-fulfillment-section",
+      "passed": true,
+      "evidence": "'Ticket Fulfillment' correctly absent"
+    },
+    {
+      "text": "has-no-ticket-headers",
+      "passed": false,
+      "evidence": "Missing: ['Highlights', 'Findings', 'What I Verified']"
+    },
+    {
+      "text": "references-pr",
+      "passed": true,
+      "evidence": "Found '1340'"
+    },
+    {
+      "text": "header-format-no-ticket",
+      "passed": true,
+      "evidence": "Matched: 'PR #1340'"
+    },
+    {
+      "text": "cites-file-paths",
+      "passed": true,
+      "evidence": "Matched: 'src/shared/email/templates.py'"
+    },
+    {
+      "text": "flags-dropped-reply-to",
+      "passed": true,
+      "evidence": "Matched: 'reply_to` support was drop'"
+    },
+    {
+      "text": "uses-severity-levels",
+      "passed": true,
+      "evidence": "Found: ['Critical']"
+    },
+    {
+      "text": "has-highlights",
+      "passed": false,
+      "evidence": "Pattern /(?s)### Highlights.*?\\n- .+/ not matched"
+    }
+  ]
+}

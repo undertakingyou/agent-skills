@@ -1,0 +1,19 @@
+{
+  "number": 891,
+  "title": "feat: show cert status badges on dispatch board",
+  "body": "## Summary\nAdds certification status badges to technician cards on the dispatch board. Queries the certifications DB directly to get expiration dates and computes the badge status.\n\n## Test plan\n- Manual testing with technicians who have valid, expiring, and expired certs\n- Checked that badge shows worst status when multiple certs exist",
+  "baseRefName": "main",
+  "headRefName": "feat/cert-status-dispatch",
+  "files": [
+    {"path": "scheduling/src/dispatch/components/TechnicianCard.tsx", "additions": 35, "deletions": 4},
+    {"path": "scheduling/src/dispatch/hooks/useCertStatus.ts", "additions": 48, "deletions": 0},
+    {"path": "scheduling/src/dispatch/queries/certifications.ts", "additions": 22, "deletions": 0},
+    {"path": "scheduling/src/dispatch/components/CertBadge.tsx", "additions": 30, "deletions": 0}
+  ],
+  "additions": 135,
+  "deletions": 4,
+  "commits": [
+    {"messageHeadline": "feat: add cert status badge component"},
+    {"messageHeadline": "feat: query cert data and wire up to dispatch board"}
+  ]
+}

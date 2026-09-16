@@ -1,0 +1,50 @@
+{
+  "eval_id": 3,
+  "eval_name": "no-ticket-refactor-dropped-reply-to",
+  "run_type": "with_skill",
+  "pass_rate": 1.0,
+  "passed": 8,
+  "total": 8,
+  "expectations": [
+    {
+      "text": "no-ticket-fulfillment-section",
+      "passed": true,
+      "evidence": "'Ticket Fulfillment' correctly absent"
+    },
+    {
+      "text": "has-no-ticket-headers",
+      "passed": true,
+      "evidence": "All values found"
+    },
+    {
+      "text": "references-pr",
+      "passed": true,
+      "evidence": "Found '1340'"
+    },
+    {
+      "text": "header-format-no-ticket",
+      "passed": true,
+      "evidence": "Matched: 'PR #1340'"
+    },
+    {
+      "text": "cites-file-paths",
+      "passed": true,
+      "evidence": "Matched: 'src/shared/email/renderer.py'"
+    },
+    {
+      "text": "flags-dropped-reply-to",
+      "passed": true,
+      "evidence": "Matched: 'reply_to` support silently drop'"
+    },
+    {
+      "text": "uses-severity-levels",
+      "passed": true,
+      "evidence": "Found: ['Critical', 'Important', 'Minor']"
+    },
+    {
+      "text": "has-highlights",
+      "passed": true,
+      "evidence": "Matched: '### Highlights\n\n- **Security upgrade via autoescape** (`src/shared/email/rendere'"
+    }
+  ]
+}

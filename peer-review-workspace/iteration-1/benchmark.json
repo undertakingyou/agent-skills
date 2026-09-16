@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "skill_name": "peer-review",
+    "timestamp": "2026-09-16T22:42:00Z",
+    "executor_model": "claude-opus-4-6",
+    "evals_run": [
+      "eval-0-bulk-archive",
+      "eval-1-cert-badges",
+      "eval-2-equipment-search",
+      "eval-3-no-ticket-refactor",
+      "eval-4-no-ticket-bugfix"
+    ]
+  },
+  "configurations": [
+    {
+      "name": "with_skill",
+      "label": "With Peer-Review Skill",
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0
+      },
+      "time_seconds": {
+        "mean": 170.2,
+        "stddev": 10.8
+      },
+      "tokens": {
+        "mean": 41045,
+        "stddev": 455
+      }
+    },
+    {
+      "name": "without_skill",
+      "label": "Baseline (No Skill)",
+      "pass_rate": {
+        "mean": 0.652,
+        "stddev": 0.057
+      },
+      "time_seconds": {
+        "mean": 84.1,
+        "stddev": 9.8
+      },
+      "tokens": {
+        "mean": 28614,
+        "stddev": 611
+      }
+    }
+  ],
+  "evals": [
+    {
+      "eval_name": "eval-0-bulk-archive",
+      "with_skill": {"pass_rate": 1.0, "passed": 8, "total": 8, "time_seconds": 168.3, "tokens": 41411},
+      "without_skill": {"pass_rate": 0.625, "passed": 5, "total": 8, "time_seconds": 94.0, "tokens": 29196}
+    },
+    {
+      "eval_name": "eval-1-cert-badges",
+      "with_skill": {"pass_rate": 1.0, "passed": 9, "total": 9, "time_seconds": 175.3, "tokens": 40333},
+      "without_skill": {"pass_rate": 0.667, "passed": 6, "total": 9, "time_seconds": 74.5, "tokens": 27575}
+    },
+    {
+      "eval_name": "eval-2-equipment-search",
+      "with_skill": {"pass_rate": 1.0, "passed": 10, "total": 10, "time_seconds": 159.1, "tokens": 41304},
+      "without_skill": {"pass_rate": 0.6, "passed": 6, "total": 10, "time_seconds": 75.2, "tokens": 28223}
+    },
+    {
+      "eval_name": "eval-3-no-ticket-refactor",
+      "with_skill": {"pass_rate": 1.0, "passed": 8, "total": 8, "time_seconds": 186.9, "tokens": 40724},
+      "without_skill": {"pass_rate": 0.75, "passed": 6, "total": 8, "time_seconds": 79.5, "tokens": 29344}
+    },
+    {
+      "eval_name": "eval-4-no-ticket-bugfix",
+      "with_skill": {"pass_rate": 1.0, "passed": 8, "total": 8, "time_seconds": 161.3, "tokens": 41451},
+      "without_skill": {"pass_rate": 0.625, "passed": 5, "total": 8, "time_seconds": 97.1, "tokens": 28731}
+    }
+  ],
+  "run_summary": {
+    "delta": {
+      "pass_rate": "+34.8%",
+      "time_seconds": "+86.1s",
+      "tokens": "+12431"
+    }
+  },
+  "analyst_observations": [
+    "The skill achieves 100% assertion pass rate across all 5 evals, vs 60-75% for baseline — a consistent +35% improvement.",
+    "The new no-ticket evals (3 and 4) both correctly omit the Ticket Fulfillment section and use the no-ticket header format, confirming the optional-ticket feature works.",
+    "Baseline runs fail mainly on structural assertions (missing specific headers like 'What I Verified', no requirements table format, no severity labels) — the skill's template enforces consistent structure.",
+    "Both with-skill and baseline caught the key code bugs (reply_to drop, date parsing), but only the skill runs consistently flagged them in the expected format.",
+    "With-skill runs use ~1.4x more tokens and ~2x more wall-clock time than baselines, which is expected since the skill spawns parallel subagents for analysis."
+  ]
+}

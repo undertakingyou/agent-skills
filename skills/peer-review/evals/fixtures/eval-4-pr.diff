@@ -1,0 +1,149 @@
+diff --git a/src/scheduling/time_utils.py b/src/scheduling/time_utils.py
+index a1b2c3d..e4f5g6h 100644
+--- a/src/scheduling/time_utils.py
++++ b/src/scheduling/time_utils.py
+@@ -1,16 +1,24 @@
+-from datetime import datetime, timedelta, timezone
++from datetime import datetime, timedelta, timezone, time
++from zoneinfo import ZoneInfo
+
+
+-EST_OFFSET = timezone(timedelta(hours=-5))
++def get_user_tz(tz_name: str) -> ZoneInfo:
++    return ZoneInfo(tz_name)
+
+
+-def to_local(dt: datetime) -> datetime:
+-    return dt.astimezone(EST_OFFSET)
++def to_local(dt: datetime, tz: ZoneInfo) -> datetime:
++    return dt.astimezone(tz)
+
+
+-def to_utc(dt: datetime) -> datetime:
++def to_utc(dt: datetime, tz: ZoneInfo | None = None) -> datetime:
++    if dt.tzinfo is None and tz:
++        dt = dt.replace(tzinfo=tz)
+     return dt.astimezone(timezone.utc)
+
+
+-def business_hours_range(date: datetime) -> tuple[datetime, datetime]:
+-    start = date.replace(hour=8, minute=0, second=0).astimezone(EST_OFFSET)
+-    end = date.replace(hour=17, minute=0, second=0).astimezone(EST_OFFSET)
++def business_hours_range(date: datetime, tz: ZoneInfo) -> tuple[datetime, datetime]:
++    local_date = date.astimezone(tz)
++    start = local_date.replace(hour=8, minute=0, second=0, microsecond=0)
++    end = local_date.replace(hour=17, minute=0, second=0, microsecond=0)
+     return start, end
+diff --git a/src/scheduling/availability.py b/src/scheduling/availability.py
+index b2c3d4e..f5g6h7i 100644
+--- a/src/scheduling/availability.py
++++ b/src/scheduling/availability.py
+@@ -1,5 +1,6 @@
+ from datetime import datetime, timedelta
+-from src.scheduling.time_utils import to_local, to_utc, business_hours_range
++from zoneinfo import ZoneInfo
++from src.scheduling.time_utils import to_local, to_utc, business_hours_range, get_user_tz
+ from src.scheduling.repository import SchedulingRepository
+
+
+@@ -11,26 +12,33 @@ class AvailabilityService:
+     def get_available_slots(
+         self,
+         technician_id: str,
+-        date: datetime,
++        date_str: str,
++        tz_name: str = "America/New_York",
+         slot_duration_minutes: int = 60,
+     ) -> list[dict]:
+-        biz_start, biz_end = business_hours_range(date)
++        tz = get_user_tz(tz_name)
++        date = datetime.fromisoformat(date_str)
++        biz_start, biz_end = business_hours_range(date, tz)
+
+         existing = self.repository.get_appointments(
+             technician_id=technician_id,
+-            start=to_utc(biz_start),
+-            end=to_utc(biz_end),
++            start=to_utc(biz_start, tz),
++            end=to_utc(biz_end, tz),
+         )
+
+-        booked_ranges = [(to_local(a.start_time), to_local(a.end_time)) for a in existing]
++        booked_ranges = [
++            (to_local(a.start_time, tz), to_local(a.end_time, tz))
++            for a in existing
++        ]
+
+         slots = []
+         current = biz_start
+         while current + timedelta(minutes=slot_duration_minutes) <= biz_end:
+             slot_end = current + timedelta(minutes=slot_duration_minutes)
+-            is_free = not any(
++            overlaps = any(
+                 s < slot_end and e > current for s, e in booked_ranges
+             )
+-            if is_free:
++            if not overlaps:
+                 slots.append({
+-                    "start": to_utc(current).isoformat(),
+-                    "end": to_utc(slot_end).isoformat(),
++                    "start": to_utc(current, tz).isoformat(),
++                    "end": to_utc(slot_end, tz).isoformat(),
++                    "local_start": current.isoformat(),
++                    "local_end": slot_end.isoformat(),
+                 })
+             current = slot_end
+diff --git a/src/scheduling/routes.py b/src/scheduling/routes.py
+index c3d4e5f..g6h7i8j 100644
+--- a/src/scheduling/routes.py
++++ b/src/scheduling/routes.py
+@@ -18,8 +18,8 @@ async def get_available_slots(
+     technician_id: str,
+-    date: str,
++    date: str = Query(..., description="ISO date string"),
++    tz: str = Query("America/New_York", description="IANA timezone name"),
+     service: AvailabilityService = Depends(get_availability_service),
+ ):
+     return service.get_available_slots(
+         technician_id=technician_id,
+-        date=datetime.fromisoformat(date),
++        date_str=date,
++        tz_name=tz,
+     )
+diff --git a/tests/scheduling/test_availability.py b/tests/scheduling/test_availability.py
+index d4e5f6g..h7i8j9k 100644
+--- a/tests/scheduling/test_availability.py
++++ b/tests/scheduling/test_availability.py
+@@ -30,3 +30,31 @@ class TestAvailability:
+
+         assert len(slots) == 9  # 8am-5pm = 9 one-hour slots
+         assert all("start" in s and "end" in s for s in slots)
++
++    def test_dst_spring_forward(self, service, mock_repo):
++        """March 9, 2025 — clocks spring forward at 2am EST -> 3am EDT.
++        Business hours should still be 8am-5pm local (EDT on this day)."""
++        mock_repo.get_appointments.return_value = []
++
++        slots = service.get_available_slots(
++            technician_id="tech-1",
++            date_str="2025-03-09",
++            tz_name="America/New_York",
++        )
++
++        # Should still get 9 slots: 8am-5pm EDT
++        assert len(slots) == 9
++
++    def test_availability_respects_user_timezone(self, service, mock_repo):
++        """A Pacific user should get slots in PT, not ET."""
++        mock_repo.get_appointments.return_value = []
++
++        slots = service.get_available_slots(
++            technician_id="tech-1",
++            date_str="2025-06-15",
++            tz_name="America/Los_Angeles",
++        )
++
++        assert len(slots) == 9
++        # First slot should be 8am Pacific = 15:00 UTC in summer
++        first_start = slots[0]["start"]
++        assert "15:00:00" in first_start

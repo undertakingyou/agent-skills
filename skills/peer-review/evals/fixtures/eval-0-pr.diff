@@ -1,0 +1,204 @@
+diff --git a/src/work_orders/schemas.py b/src/work_orders/schemas.py
+index a1b2c3d..e4f5g6h 100644
+--- a/src/work_orders/schemas.py
++++ b/src/work_orders/schemas.py
+@@ -1,5 +1,6 @@
+ from pydantic import BaseModel, Field
+ from typing import List, Optional
++from uuid import UUID
+
+
+ class WorkOrderOutput(BaseModel):
+@@ -12,3 +13,20 @@ class WorkOrderOutput(BaseModel):
+     status: str
+     created_at: str
+     updated_at: str
++
++
++class BulkArchiveRequest(BaseModel):
++    work_order_ids: List[UUID] = Field(..., max_length=100)
++
++
++class ArchiveFailure(BaseModel):
++    id: UUID
++    reason: str
++
++
++class BulkArchiveResponse(BaseModel):
++    archived: List[UUID]
++    failed: List[ArchiveFailure]
++
++    class Config:
++        json_schema_extra = {"example": {"archived": ["..."], "failed": []}}
+diff --git a/src/work_orders/repository.py b/src/work_orders/repository.py
+index b2c3d4e..f5g6h7i 100644
+--- a/src/work_orders/repository.py
++++ b/src/work_orders/repository.py
+@@ -45,3 +45,31 @@ class WorkOrderRepository:
+         return self.session.query(WorkOrder).filter(
+             WorkOrder.tenant_id == tenant_id
+         ).all()
++
++    def get_by_ids(self, work_order_ids: list[str], tenant_id: str) -> list[WorkOrder]:
++        return self.session.query(WorkOrder).filter(
++            WorkOrder.id.in_(work_order_ids),
++            WorkOrder.tenant_id == tenant_id,
++            WorkOrder.deleted_at.is_(None),
++        ).all()
++
++    def bulk_archive(self, work_orders: list[WorkOrder]) -> None:
++        for wo in work_orders:
++            wo.status = "archived"
++            wo.archived_at = datetime.utcnow()
++        self.session.flush()
+diff --git a/src/work_orders/service.py b/src/work_orders/service.py
+index c3d4e5f..g6h7i8j 100644
+--- a/src/work_orders/service.py
++++ b/src/work_orders/service.py
+@@ -1,6 +1,8 @@
+ from typing import List
++from uuid import UUID
+ from src.work_orders.repository import WorkOrderRepository
+ from src.work_orders.schemas import BulkArchiveResponse, ArchiveFailure
++from src.audit.service import AuditService
+
+
+ ARCHIVABLE_STATUSES = {"completed", "cancelled"}
+@@ -10,6 +12,7 @@ class WorkOrderService:
+     def __init__(self, repository: WorkOrderRepository, audit_service: AuditService):
+         self.repository = repository
+         self.audit_service = audit_service
++        self._logger = get_logger(__name__)
+
+     def bulk_archive(
+         self, work_order_ids: List[UUID], tenant_id: str
+@@ -22,6 +25,7 @@ class WorkOrderService:
+         found_ids = {wo.id for wo in work_orders}
+         missing_ids = set(work_order_ids) - found_ids
+         for mid in missing_ids:
++            self._logger.warning("work_order_not_found", work_order_id=str(mid))
+             failures.append(ArchiveFailure(id=mid, reason="not found"))
+
+         archivable = []
+@@ -36,6 +40,9 @@ class WorkOrderService:
+
+         self.repository.bulk_archive(archivable)
+
++        for wo in archivable:
++            self.audit_service.log("work_order_archived", entity_id=str(wo.id), tenant_id=tenant_id)
++
+         return BulkArchiveResponse(
+             archived=[wo.id for wo in archivable],
+             failed=failures,
+diff --git a/src/work_orders/routes.py b/src/work_orders/routes.py
+index d4e5f6g..h7i8j9k 100644
+--- a/src/work_orders/routes.py
++++ b/src/work_orders/routes.py
+@@ -1,6 +1,8 @@
+ from fastapi import APIRouter, Depends, HTTPException
+ from src.work_orders.service import WorkOrderService
+ from src.work_orders.schemas import BulkArchiveRequest, BulkArchiveResponse
++from src.auth.dependencies import get_current_tenant
++from src.work_orders.dependencies import get_work_order_service
+
+ router = APIRouter(prefix="/api/v1/work-orders", tags=["work-orders"])
+
+@@ -25,3 +27,18 @@ async def get_work_order(
+     work_order_id: str,
+     service: WorkOrderService = Depends(get_work_order_service),
+ ):
+     return service.get(work_order_id)
++
++
++@router.post("/bulk-archive", response_model=BulkArchiveResponse)
++async def bulk_archive(
++    request: BulkArchiveRequest,
++    tenant_id: str = Depends(get_current_tenant),
++    service: WorkOrderService = Depends(get_work_order_service),
++):
++    if len(request.work_order_ids) > 100:
++        raise HTTPException(status_code=400, detail="Batch size cannot exceed 100")
++
++    return service.bulk_archive(
++        work_order_ids=request.work_order_ids,
++        tenant_id=tenant_id,
++    )
+diff --git a/tests/work_orders/test_bulk_archive.py b/tests/work_orders/test_bulk_archive.py
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/tests/work_orders/test_bulk_archive.py
+@@ -0,0 +1,95 @@
++import pytest
++from uuid import uuid4
++from unittest.mock import MagicMock
++from src.work_orders.service import WorkOrderService
++
++
++@pytest.fixture
++def mock_repo():
++    return MagicMock()
++
++
++@pytest.fixture
++def mock_audit():
++    return MagicMock()
++
++
++@pytest.fixture
++def service(mock_repo, mock_audit):
++    return WorkOrderService(repository=mock_repo, audit_service=mock_audit)
++
++
++class TestBulkArchive:
++    def test_archives_completed_work_orders(self, service, mock_repo):
++        wo1 = MagicMock(id=uuid4(), status="completed")
++        wo2 = MagicMock(id=uuid4(), status="completed")
++        mock_repo.get_by_ids.return_value = [wo1, wo2]
++
++        result = service.bulk_archive([wo1.id, wo2.id], tenant_id="tenant-1")
++
++        assert len(result.archived) == 2
++        assert len(result.failed) == 0
++        mock_repo.bulk_archive.assert_called_once()
++
++    def test_rejects_in_progress_work_orders(self, service, mock_repo):
++        wo = MagicMock(id=uuid4(), status="in_progress")
++        mock_repo.get_by_ids.return_value = [wo]
++
++        result = service.bulk_archive([wo.id], tenant_id="tenant-1")
++
++        assert len(result.archived) == 0
++        assert len(result.failed) == 1
++        assert "status" in result.failed[0].reason
++
++    def test_reports_missing_work_orders(self, service, mock_repo):
++        mock_repo.get_by_ids.return_value = []
++        missing_id = uuid4()
++
++        result = service.bulk_archive([missing_id], tenant_id="tenant-1")
++
++        assert len(result.failed) == 1
++        assert result.failed[0].reason == "not found"
++
++    def test_mixed_valid_and_invalid(self, service, mock_repo):
++        wo_ok = MagicMock(id=uuid4(), status="completed")
++        wo_bad = MagicMock(id=uuid4(), status="in_progress")
++        mock_repo.get_by_ids.return_value = [wo_ok, wo_bad]
++
++        result = service.bulk_archive(
++            [wo_ok.id, wo_bad.id], tenant_id="tenant-1"
++        )
++
++        assert len(result.archived) == 1
++        assert len(result.failed) == 1
++
++    def test_audit_log_created_for_each_archived(self, service, mock_repo, mock_audit):
++        wo = MagicMock(id=uuid4(), status="cancelled")
++        mock_repo.get_by_ids.return_value = [wo]
++
++        service.bulk_archive([wo.id], tenant_id="tenant-1")
++
++        mock_audit.log.assert_called_once_with(
++            "work_order_archived", entity_id=str(wo.id), tenant_id="tenant-1"
++        )

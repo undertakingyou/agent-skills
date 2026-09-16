@@ -1,0 +1,23 @@
+{
+  "number": 1340,
+  "title": "refactor: extract shared email template rendering",
+  "body": "## Summary\nThe notification service and the report-delivery service both had their own Jinja2 template rendering logic — same patterns, slightly different implementations. This PR extracts a shared `TemplateRenderer` class into `src/shared/email/` that both services now use.\n\nAlso cleaned up some dead code in the notification service that was left over from the old Mailgun integration.\n\n## Test plan\n- Existing notification tests still pass\n- Existing report-delivery tests still pass\n- Added unit tests for the shared TemplateRenderer",
+  "baseRefName": "main",
+  "headRefName": "refactor/shared-email-templates",
+  "files": [
+    {"path": "src/shared/email/renderer.py", "additions": 65, "deletions": 0},
+    {"path": "src/shared/email/templates.py", "additions": 18, "deletions": 0},
+    {"path": "src/notifications/service.py", "additions": 8, "deletions": 42},
+    {"path": "src/notifications/email_builder.py", "additions": 0, "deletions": 87},
+    {"path": "src/report_delivery/sender.py", "additions": 6, "deletions": 38},
+    {"path": "tests/shared/email/test_renderer.py", "additions": 55, "deletions": 0},
+    {"path": "tests/notifications/test_service.py", "additions": 3, "deletions": 3}
+  ],
+  "additions": 155,
+  "deletions": 170,
+  "commits": [
+    {"messageHeadline": "refactor: extract TemplateRenderer into shared/email"},
+    {"messageHeadline": "chore: remove dead Mailgun email builder"},
+    {"messageHeadline": "test: add TemplateRenderer unit tests"}
+  ]
+}

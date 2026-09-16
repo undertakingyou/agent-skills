@@ -1,0 +1,60 @@
+{
+  "eval_id": 2,
+  "eval_name": "equipment-search-pagination-mismatch",
+  "run_type": "without_skill",
+  "pass_rate": 0.6,
+  "passed": 6,
+  "total": 10,
+  "expectations": [
+    {
+      "text": "has-required-headers",
+      "passed": false,
+      "evidence": "Missing: ['Ticket Fulfillment', 'Highlights', 'Findings', 'What I Verified']"
+    },
+    {
+      "text": "has-requirements-table",
+      "passed": false,
+      "evidence": "Pattern /\\|.*Requirement.*\\|.*Status.*\\|/ not matched"
+    },
+    {
+      "text": "references-ticket",
+      "passed": true,
+      "evidence": "Found 'DEMO-303'"
+    },
+    {
+      "text": "references-pr",
+      "passed": true,
+      "evidence": "Found '1105'"
+    },
+    {
+      "text": "cites-file-paths",
+      "passed": true,
+      "evidence": "Matched: 'schemas.py'"
+    },
+    {
+      "text": "flags-pagination-mismatch",
+      "passed": true,
+      "evidence": "Matched: 'Cursor'"
+    },
+    {
+      "text": "flags-missing-date-filter",
+      "passed": true,
+      "evidence": "Matched: 'Installation date range filter is not'"
+    },
+    {
+      "text": "uses-severity-levels",
+      "passed": false,
+      "evidence": "None of ['Critical', 'Important', 'Minor'] found"
+    },
+    {
+      "text": "has-fulfillment-verdict",
+      "passed": true,
+      "evidence": "Matched: 'unmet'"
+    },
+    {
+      "text": "has-highlights",
+      "passed": false,
+      "evidence": "Pattern /(?s)### Highlights.*?\\n- .+/ not matched"
+    }
+  ]
+}

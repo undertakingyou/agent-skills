@@ -1,0 +1,232 @@
+diff --git a/src/equipment/schemas.py b/src/equipment/schemas.py
+index a1b2c3d..e4f5g6h 100644
+--- a/src/equipment/schemas.py
++++ b/src/equipment/schemas.py
+@@ -1,5 +1,6 @@
+ from pydantic import BaseModel, Field
+-from typing import List, Optional
++from typing import List, Optional, Any
++from datetime import date
+
+
+ class EquipmentOutput(BaseModel):
+@@ -10,3 +11,31 @@ class EquipmentOutput(BaseModel):
+     manufacturer: str
+     install_date: Optional[str]
+     is_active: bool
++
++
++class EquipmentSearchRequest(BaseModel):
++    query: Optional[str] = None
++    equipment_type: Optional[str] = None
++    manufacturer: Optional[str] = None
++    is_active: Optional[bool] = None
++    page: int = Field(default=1, ge=1)
++    page_size: int = Field(default=25, ge=1, le=100)
++
++
++class PaginationMeta(BaseModel):
++    page: int
++    page_size: int
++    total_pages: int
++
++
++class EquipmentSearchResponse(BaseModel):
++    data: List[EquipmentOutput]
++    meta: PaginationMeta
+diff --git a/src/equipment/repository.py b/src/equipment/repository.py
+index b2c3d4e..f5g6h7i 100644
+--- a/src/equipment/repository.py
++++ b/src/equipment/repository.py
+@@ -1,5 +1,6 @@
+ from sqlalchemy.orm import Session
+ from src.equipment.models import Equipment
++from sqlalchemy import or_, func
+
+
+ class EquipmentRepository:
+@@ -18,3 +19,54 @@ class EquipmentRepository:
+         return self.session.query(Equipment).filter(
+             Equipment.tenant_id == tenant_id
+         ).all()
++
++    def search(
++        self,
++        tenant_id: str,
++        query: str | None = None,
++        equipment_type: str | None = None,
++        manufacturer: str | None = None,
++        is_active: bool | None = None,
++        page: int = 1,
++        page_size: int = 25,
++    ) -> tuple[list[Equipment], int]:
++        q = self.session.query(Equipment).filter(
++            Equipment.tenant_id == tenant_id,
++            Equipment.deleted_at.is_(None),
++        )
++
++        if query:
++            search_term = f"%{query}%"
++            q = q.filter(
++                or_(
++                    Equipment.name.ilike(search_term),
++                    Equipment.model_number.ilike(search_term),
++                )
++            )
++
++        if equipment_type:
++            q = q.filter(Equipment.equipment_type == equipment_type)
++
++        if manufacturer:
++            q = q.filter(Equipment.manufacturer == manufacturer)
++
++        if is_active is not None:
++            q = q.filter(Equipment.is_active == is_active)
++
++        total = q.count()
++        offset = (page - 1) * page_size
++        results = q.offset(offset).limit(page_size).all()
++
++        return results, total
+diff --git a/src/equipment/service.py b/src/equipment/service.py
+index c3d4e5f..g6h7i8j 100644
+--- a/src/equipment/service.py
++++ b/src/equipment/service.py
+@@ -1,4 +1,6 @@
++import math
+ from src.equipment.repository import EquipmentRepository
++from src.equipment.schemas import EquipmentSearchResponse, PaginationMeta, EquipmentOutput
+
+
+ class EquipmentService:
+@@ -6,3 +8,30 @@ class EquipmentService:
+     def __init__(self, repository: EquipmentRepository):
+         self.repository = repository
+
++    def search(
++        self,
++        tenant_id: str,
++        query: str | None = None,
++        equipment_type: str | None = None,
++        manufacturer: str | None = None,
++        is_active: bool | None = None,
++        page: int = 1,
++        page_size: int = 25,
++    ) -> EquipmentSearchResponse:
++        results, total = self.repository.search(
++            tenant_id=tenant_id,
++            query=query,
++            equipment_type=equipment_type,
++            manufacturer=manufacturer,
++            is_active=is_active,
++            page=page,
++            page_size=page_size,
++        )
++
++        return EquipmentSearchResponse(
++            data=[EquipmentOutput.model_validate(r) for r in results],
++            meta=PaginationMeta(
++                page=page,
++                page_size=page_size,
++                total_pages=math.ceil(total / page_size) if total > 0 else 1,
++            ),
++        )
+diff --git a/src/equipment/routes.py b/src/equipment/routes.py
+index d4e5f6g..h7i8j9k 100644
+--- a/src/equipment/routes.py
++++ b/src/equipment/routes.py
+@@ -1,5 +1,7 @@
+-from fastapi import APIRouter, Depends
++from fastapi import APIRouter, Depends, Query
+ from src.equipment.service import EquipmentService
++from src.equipment.schemas import EquipmentSearchRequest, EquipmentSearchResponse
++from src.auth.dependencies import get_current_tenant
+
+ router = APIRouter(prefix="/api/v1/equipment", tags=["equipment"])
+
+@@ -10,3 +12,22 @@ async def get_equipment(
+     equipment_id: str,
+     service: EquipmentService = Depends(get_equipment_service),
+ ):
+     return service.get(equipment_id)
++
++
++@router.post("/search", response_model=EquipmentSearchResponse)
++async def search_equipment(
++    request: EquipmentSearchRequest,
++    tenant_id: str = Depends(get_current_tenant),
++    service: EquipmentService = Depends(get_equipment_service),
++):
++    return service.search(
++        tenant_id=tenant_id,
++        query=request.query,
++        equipment_type=request.equipment_type,
++        manufacturer=request.manufacturer,
++        is_active=request.is_active,
++        page=request.page,
++        page_size=request.page_size,
++    )
+diff --git a/tests/equipment/test_search.py b/tests/equipment/test_search.py
+new file mode 100644
+index 0000000..a1b2c3d
+--- /dev/null
++++ b/tests/equipment/test_search.py
+@@ -0,0 +1,78 @@
++import pytest
++from unittest.mock import MagicMock
++from src.equipment.service import EquipmentService
++
++
++@pytest.fixture
++def mock_repo():
++    return MagicMock()
++
++
++@pytest.fixture
++def service(mock_repo):
++    return EquipmentService(repository=mock_repo)
++
++
++class TestEquipmentSearch:
++    def test_search_by_name(self, service, mock_repo):
++        equip = MagicMock(name="Carrier AC Unit", model_number="38AUZ")
++        mock_repo.search.return_value = ([equip], 1)
++
++        result = service.search(tenant_id="t1", query="carrier")
++
++        mock_repo.search.assert_called_once()
++        assert len(result.data) == 1
++
++    def test_search_with_type_filter(self, service, mock_repo):
++        equip = MagicMock(equipment_type="HVAC")
++        mock_repo.search.return_value = ([equip], 1)
++
++        result = service.search(
++            tenant_id="t1", equipment_type="HVAC"
++        )
++
++        assert len(result.data) == 1
++
++    def test_empty_search_returns_all(self, service, mock_repo):
++        items = [MagicMock() for _ in range(3)]
++        mock_repo.search.return_value = (items, 3)
++
++        result = service.search(tenant_id="t1")
++
++        assert len(result.data) == 3
++
++    def test_pagination_metadata(self, service, mock_repo):
++        mock_repo.search.return_value = ([], 75)
++
++        result = service.search(tenant_id="t1", page=2, page_size=25)
++
++        assert result.meta.page == 2
++        assert result.meta.total_pages == 3
++
++    def test_active_filter(self, service, mock_repo):
++        equip = MagicMock(is_active=True)
++        mock_repo.search.return_value = ([equip], 1)
++
++        result = service.search(tenant_id="t1", is_active=True)
++
++        assert len(result.data) == 1
