@@ -152,7 +152,15 @@ Only load skills relevant to the files actually changed.
 
 #### Stale References
 
-Check for **ticket numbers in code comments or docstrings** (e.g., `# WKD-123`, `TODO(EQD-456)`, `"""See INTAPI-99"""`). Ticket numbers belong in commit messages and branch names where they are searchable and linked to the ticket tracker — in code comments they become meaningless noise as soon as the ticket is closed or renumbered. Flag any that appear in the diff's additions.
+**This check MUST be included in the code quality subagent prompt when delegating.** It is easy to omit because it is a grep, not a code-reading task — but it is part of the code quality analysis and must travel with it.
+
+Check for **ticket numbers in code comments, docstrings, or test descriptions** (e.g., `# WKD-123`, `TODO(EQD-456)`, `"""See INTAPI-99"""`, `describe('feature (WKD-123)')`). Ticket numbers belong in commit messages and branch names where they are searchable and linked to the ticket tracker — in code comments and test names they become meaningless noise as soon as the ticket is closed or renumbered. Flag any that appear in the diff's additions.
+
+Run this as part of the code quality analysis:
+```bash
+gh pr diff <PR-NUMBER> | grep '^+' | grep -v '^+++' | grep -oE '[A-Z]{2,}-[0-9]+' | sort | uniq -c | sort -rn
+```
+If any ticket numbers appear, count them and report as a **Minor** finding listing the count and which files they appear in.
 
 #### What to Skip
 
