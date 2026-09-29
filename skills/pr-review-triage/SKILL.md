@@ -58,7 +58,7 @@ Collect every comment into a single list. For each comment, capture:
 
 ### Step 3 — Filter and deduplicate
 
-- Exclude bot comments (author login ending in `[bot]` or known CI bots).
+- Exclude CI/status bot comments — bots that post build results, coverage reports, deployment status, or dependency update noise. However, keep comments from bots that provide code review feedback (e.g., Copilot, Cursor, CodeRabbit). The distinction is content: if a bot is giving substantive review feedback (suggestions, bug reports, style issues), treat it like any other reviewer.
 - Exclude resolved review threads — only surface unresolved feedback.
 - Exclude empty review bodies (GitHub creates a review object with an empty body for plain approvals).
 - Deduplicate: if the same author left the same text in both a review body and an inline comment, keep only the inline one.
